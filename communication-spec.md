@@ -23,11 +23,14 @@ Here is the general layout of a packet:
 
 ### (Re)Initialize LEDs
 * Header: `0x00`
+* Size: omitted
+* Data: omitted
 
 No other data is required.
 
 ### Solid single color
 * Header: `0x01`
+* Size: omitted
 * Data: `<RED><GREEN><BLUE>`
 
 Where `<RED>`, `<GREEN>`, and `<BLUE>` are single bytes that correspond to their color code values.
@@ -45,14 +48,18 @@ The byte size of the data will be this value multiplied by three.
 Where `<RED>`, `<GREEN>`, and `<BLUE>` are single bytes that correspond to their color code values, being a continued pattern with no explicit terminator byte.
 
 ### Fade effect
-* Header: 0x03
+* Header: `0x03`
+* Size: omitted
+* Data: omitted
 
 This causes all colors to fade to the next color all at once.
 
 No other data is required.
 
 ### Cycle effect
-* Header 0x04
+* Header `0x04`
+* Size: omitted
+* Data: omitted
 
 This causes colors to apply one LED at a time with notable delay.
 
