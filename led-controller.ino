@@ -27,12 +27,23 @@ void setup() {
   Serial.begin(115200);
 }
 
+int lerp(int a, int b, float k)
+{
+  return (int)(
+      (((float)(a - b)) * k) + a
+    );
+}
+
 byte fade_index = 0;
+byte fade_map_index = 0;
 byte led_cycle_index = 0;
-Effect cur_effect = Effect::NONE;
-RGB_t intermediate_color = {0, 0, 0};
-//RGB_t* fade_colors = new RGB_t[3] { {0x50, 0, 0}, {0, 0x50, 0}, {0, 0, 0x50} };
-RGB_t* fade_colors = new RGB_t[1] { {0, 0, 0} };
+//Effect cur_effect = Effect::NONE;
+Effect cur_effect = Effect::CYCLE;
+//Effect cur_effect = Effect::FADE;
+//RGB_t intermediate_color = {0, 0, 0};
+RGB_t* fade_colors = new RGB_t[5] { {0x50, 0, 0}, {0, 0x50, 0}, {0, 0, 0x50}, {0x50, 0, 0x50}, {0x50, 0x50, 0} };
+//RGB_t* fade_colors = new RGB_t[1] { {0, 0, 0} };
+//RGB_t* fade_colors = new RGB_t[1] { {0, 50, 0} };
 
 void loop() {
   if (Serial.available()) {
@@ -44,7 +55,6 @@ void loop() {
         cur_effect = Effect::NONE;
         delete[] fade_colors;
         fade_colors = new RGB_t[1] { {0, 0, 0} };
-        
         break;
       case SINGLE_COLOR_COM:
         cur_effect = Effect::NONE;
@@ -98,21 +108,35 @@ void do_color_effect() {
 }
 
 void do_effect_none() {
+  Serial.print("Effect colors: ");
+  Serial.print(fade_colors[0].red);
+  Serial.print(" ");
+  Serial.print(fade_colors[0].green);
+  Serial.print(" ");
+  Serial.println(fade_colors[0].blue);
   for (int i = 0; i < LEDS_COUNT; i++) {
-    Serial.print("Effect colors: ");
-    Serial.print(fade_colors[0].red);
-    Serial.print(" ");
-    Serial.print(fade_colors[0].green);
-    Serial.print(" ");
-    Serial.println(fade_colors[0].blue);
     strip.setLedColorData(i, fade_colors[0].red, fade_colors[0].green, fade_colors[0].blue);
   }
   strip.show();
 }
 
 void do_effect_fade() {
-  
+  fade_map_index++;
+  if (fade_map_index > 100) {
+    fade_map_index = 0;
+    fade_index = (fade_index + 1) % (sizeof(fade_colors) - 1);
+  }
+  byte target_fade = (fade_index + 1) % (sizeof(fade_colors) - 1);
+  byte r = lerp(fade_colors[fade_index].red, fade_colors[target_fade].red, fade_map_index / 100.0);
+  byte g = lerp(fade_colors[fade_index].green, fade_colors[target_fade].green, fade_map_index / 100.0);
+  byte b = lerp(fade_colors[fade_index].blue, fade_colors[target_fade].blue, fade_map_index / 100.0);
+  for (int i = 0; i < LEDS_COUNT; i++) {
+    strip.setLedColorData(i, r, g, b);
+  }
+  strip.show();
+  delay(10);
 }
+
 
 void do_effect_cycle() {
   RGB_t cur_color = fade_colors[fade_index];
@@ -123,11 +147,11 @@ void do_effect_cycle() {
   Serial.print(" ");
   Serial.println(cur_color.blue);
   Serial.println(led_cycle_index);
-  strip.setLedColorData(led_cycle_index, cur_color.red, cur_color.green, cur_color.blue);
   if (led_cycle_index >= LEDS_COUNT) {
     led_cycle_index = -1;
-    fade_index = (fade_index + 1) % (sizeof(fade_colors) - 1);
+    fade_index = (fade_index + 1) % ((sizeof(fade_colors) - 1) * (sizeof(RGB_t) - 1));
   }
+  strip.setLedColorData(led_cycle_index, cur_color.red, cur_color.green, cur_color.blue);
   led_cycle_index += 1;
   strip.show();
   delay(10);
