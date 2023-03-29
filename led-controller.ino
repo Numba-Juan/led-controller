@@ -2,8 +2,9 @@
 #include "Freenove_WS2812_Lib_for_ESP32.h"
 
 #define LEDS_COUNT  60
-#define LEDS_PIN	5
-#define CHANNEL		0
+#define LEDS_PIN	  5
+#define MIC_PIN     36
+#define LED_CHANNEL 0
 
 #define INIT_COM           0x00
 #define SINGLE_COLOR_COM   0x01
@@ -19,17 +20,12 @@ typedef struct {
 
 enum class Effect {NONE, FADE, CYCLE};
 
-Freenove_ESP32_WS2812 strip = Freenove_ESP32_WS2812(LEDS_COUNT, LEDS_PIN, CHANNEL, TYPE_GRB);
+Freenove_ESP32_WS2812 strip = Freenove_ESP32_WS2812(LEDS_COUNT, LEDS_PIN, LED_CHANNEL, TYPE_GRB);
 
 void setup() {
   strip.begin();
   randomSeed(analogRead(0));
   Serial.begin(115200);
-}
-
-int lerp(int a, int b, int k)
-{
-  return  (((a - b)) * (k / 100)) + a;
 }
 
 byte fade_index = 0;
@@ -129,22 +125,31 @@ void do_effect_fade() {
     fade_index = (fade_index + 1) % num_fade_colors;
   }
   byte target_fade = (fade_index + 1) % num_fade_colors;
-  byte r = lerp(fade_colors[fade_index].red, fade_colors[target_fade].red, fade_map_index);
+//  byte r = lerp(fade_colors[fade_index].red, fade_colors[target_fade].red, fade_map_index);
 //  byte g = lerp(fade_colors[fade_index].green, fade_colors[target_fade].green, fade_map_index);
 //  byte b = lerp(fade_colors[fade_index].blue, fade_colors[target_fade].blue, fade_map_index);
-  byte g = 0;
-  byte b = 0;
-  Serial.print("Lerp: ");
-  Serial.print(r);
-  Serial.print(" ");
-  Serial.print(fade_index);
-  Serial.print(" ");
-  Serial.print(target_fade);
-  for (int i = 0; i < LEDS_COUNT; i++) {
-    strip.setLedColorData(i, r, g, b);
-  }
+  byte r = map(fade_map_index, 0, 100, fade_colors[fade_index].red, fade_colors[target_fade].red);
+  byte g = map(fade_map_index, 0, 100, fade_colors[fade_index].green, fade_colors[target_fade].green);
+  byte b = map(fade_map_index, 0, 100, fade_colors[fade_index].blue, fade_colors[target_fade].blue);
+//  for (int i = 0; i < LEDS_COUNT; i++) {
+//    strip.setLedColorData(i, r, g, b);
+//  }
+  volume_based_lighting(r, g, b);
   strip.show();
   delay(10);
+}
+
+void volume_based_lighting(byte r, byte g, byte b) {
+  int mic_amplitude = analogRead(MIC_PIN);
+  Serial.println(mic_amplitude);
+  byte length_from_mid = map(mic_amplitude, 0, 4095, 1, LEDS_COUNT / 2);
+  for (int i = 0; i < LEDS_COUNT; i++) {
+     strip.setLedColorData(i, 0, 0, 0);
+  }
+  for (int i = (LEDS_COUNT / 2) - length_from_mid; i < (LEDS_COUNT / 2) + length_from_mid - 1; i++) {
+    strip.setLedColorData(i, r, g, b);
+  }
+  delay(2);
 }
 
 
